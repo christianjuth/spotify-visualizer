@@ -1,9 +1,7 @@
-import { Shader2d, useShader2d } from "../components/Shader2d";
-import { usePulse, useSpotify, AlbumArtColors } from "../components/Player";
-import { Editor } from "../components/Editor";
-import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Player } from "../components/Player";
+import { useEffect, useMemo, useState } from "react";
+import { Editor } from "../components/Editor";
+import { Shader2d, useShader2d } from "../components/Shader2d";
 
 function minifyShader(shaderCode: string) {
   return shaderCode.replace(/\n{3,}/g, "\n\n").trim();
@@ -87,12 +85,7 @@ function Page() {
   );
 
   const [fragmentShader, setFragmentShader] = useState("");
-  const { imageColors, playerConnected } = useSpotify();
   const scene = useShader2d(fragmentShader);
-
-  useEffect(() => {
-    scene.setColors(imageColors);
-  }, [scene, imageColors]);
 
   useEffect(() => {
     setFragmentShader(urlFragShader);
@@ -111,26 +104,25 @@ function Page() {
     });
   }, [minifiedShader]);
 
-  usePulse((beat) => scene.pulse(beat), 0.5);
+  const pulse = scene.pulse;
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      pulse(500);
+    }, 500);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [pulse]);
 
   return (
     <>
       <Shader2d {...scene} />
-      {playerConnected && (
-        <Editor
-          value={fragmentShader}
-          onChange={(val) => setFragmentShader(val)}
-        />
-      )}
-      <AlbumArtColors/>
+      <Editor
+        value={fragmentShader}
+        onChange={(val) => setFragmentShader(val)}
+      />
     </>
   );
 }
 
-export default function PageWithPlayer() {
-  return (
-    <Player keyboardControls={false}>
-      <Page/>
-    </Player>
-  )
-};
+export default Page;

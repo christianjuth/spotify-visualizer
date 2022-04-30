@@ -173,12 +173,12 @@ function Modal() {
           </Spin>
         ) : (
           <>
-            <SpotifyGreenButton 
+            <SpotifyGreenButton
               onClick={async () => {
                 if (!loading) {
                   setLoading(true);
                   await dispatch("transferPlayback");
-                  dispatch('resume');
+                  dispatch("resume");
                   setLoading(false);
                 }
               }}
@@ -270,7 +270,7 @@ const Context = createContext<{
   shuffle: false,
   repeatMode: 0,
   ready: false,
-  duration: 0
+  duration: 0,
 });
 
 export function useSpotify() {
@@ -398,10 +398,18 @@ export function AlbumArtColors() {
   );
 }
 
-export function Player({ children }: { children: any }) {
+export function Player({
+  children,
+  keyboardControls = true,
+}: {
+  children: any;
+  keyboardControls?: boolean;
+}) {
   const { data: auth } = useAuthToken();
   const [getPositionMs, setGetPositionMs] = useState({ fn: () => 0 as number });
-  const [getProgressPercentage, setGetProgressPercentage] = useState({ fn: () => 0 as number });
+  const [getProgressPercentage, setGetProgressPercentage] = useState({
+    fn: () => 0 as number,
+  });
   const [trackId, setTrackId] = useState<string | null>(null);
   const [loadScript, setLoadScript] = useState(false);
   const [albumArt, setAlbumArt] = useState<string | null>(null);
@@ -417,7 +425,7 @@ export function Player({ children }: { children: any }) {
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeateMode] = useState(0);
   const [ready, setReady] = useState(false);
-  const [duration, setDuration] = useState(0)
+  const [duration, setDuration] = useState(0);
 
   const authToken = auth?.authToken;
 
@@ -459,11 +467,11 @@ export function Player({ children }: { children: any }) {
           }
 
           function getProgressPercentage(): number {
-            return getPosition() / duration
+            return getPosition() / duration;
           }
 
           hasPlayed = state === null ? false : hasPlayed || !state.paused;
-          setDuration(state?.duration)
+          setDuration(state?.duration);
           setHasPlayed(hasPlayed ?? false);
           setPlaying(!state?.paused ?? false);
           setGetPositionMs({ fn: getPosition });
@@ -524,11 +532,11 @@ export function Player({ children }: { children: any }) {
           shuffle,
           repeatMode,
           ready,
-          duration
+          duration,
         }}
       >
         {children}
-        {hasPlayed ? <PlayerControls /> : <Modal />}
+        {hasPlayed ? <PlayerControls keyboardControls={keyboardControls} /> : <Modal />}
       </Context.Provider>
     </>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BsFillSkipEndFill, BsFillSkipStartFill } from "react-icons/bs";
 import {
   MdOutlinePauseCircleFilled,
@@ -10,9 +10,10 @@ import {
   RiRepeatOneFill,
 } from "react-icons/ri";
 import { TiArrowShuffle } from "react-icons/ti";
+import ReactSlider from "react-slider";
 import styled, { createGlobalStyle } from "styled-components";
-import { useSpotify } from "./Player";
 import { spotify } from "../lib/spotify";
+import { useSpotify } from "./Player";
 
 const GlobalStyle = createGlobalStyle<{ $hideMouse: boolean }>`
   body {
@@ -26,7 +27,6 @@ const AlbumArt = styled.img`
   height: 40px;
   width: 40px;
   object-fit: contain;
-  border-radius: 3px;
 `;
 
 const HiddenButton = styled.button<{ $active?: boolean }>`
@@ -69,8 +69,8 @@ const ControlWrap = styled.div`
   border-radius: 10px;
   transition: opacity 0.2s;
   align-items: center;
-  width: 320px;
-  box-shadow: 0px 5px 17px 5px rgba(0,0,0,0.28);
+  width: 330px;
+  box-shadow: 0px 5px 17px 5px rgba(0, 0, 0, 0.28);
 
   &.hide:not(:hover) {
     opacity: 0;
@@ -138,103 +138,99 @@ function FullScreenToggle() {
   );
 }
 
-const ProgressBarDiv = styled.div<{ $progress: number }>`
-  height: 5px;
+const StyledSlider = styled(ReactSlider)`
   width: 100%;
-  background-color: rgba(0,0,0,0.2);
-  position: relative;
+`;
+
+const StyledThumb = styled.div`
+  height: 12px;
+  width: 12px;
+  background-color: #000;
+  color: transparent;
+  border-radius: 50%;
+  transform: translate(0, -25%);
+`;
+
+const Thumb = (props: any, state: any) => (
+  <StyledThumb {...props}>{state.valueNow}</StyledThumb>
+);
+
+const StyledTrack = styled.div<{ index: number }>`
+  height: 5px;
   border-radius: 5px;
-
-  ${({ $progress }) => `
-    :before {
-      content: " ";
-      display: block;
-      background-color: black;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      position: absolute;
-      height: 100%;
-      width: ${Math.round($progress * 100)}%;
-      border-radius: inherit;
-    }
-  `}
-
-  :hover:before {
-    background-color: ${SPOTIFY_GREEN};
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.2);
+  :hover {
+    background: ${(props) =>
+      props.index === 0 ? SPOTIFY_GREEN : "rgba(0, 0, 0, 0.2)"};
   }
+`;
 
-  ${({ $progress }) => `
-    :after {
-      content: " ";
-      display: block;
-      background-color: black;
-      top: 50%;
-      bottom: 0;
-      left: ${Math.round($progress * 100)}%;
-      height: 12px;
-      width: 12px;
-      position: absolute;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-    }
-  `}
-`
+const Track = (props: any, state: any) => (
+  <StyledTrack {...props} index={state.index} />
+);
 
-function ProgressBar() {
-  const { getProgressPercentage, dispatch, duration } = useSpotify()
-  const [percentage, setPercentage] = useState(getProgressPercentage())
-  const ref = useRef<HTMLDivElement>(null)
+const Time = styled.span`
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 0.9em;
+`;
 
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      window.requestAnimationFrame(() => {
-        setPercentage(getProgressPercentage())
-      })
-    }, 1000)
-    return () => {
-      window.clearInterval(id)
-    }
-  }, [getProgressPercentage])
+function formatTime(ms: number) {
+  let seconds = Math.round(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  seconds = seconds % 60;
 
-  useEffect(() => {
-    const elm = ref.current
-    if (elm) {
-      function handleMouseDown(e: MouseEvent) {
-        // Get the target
-        const target = e.target as HTMLDivElement;
-
-        if (target && elm) {
-          // Get the bounding rectangle of target
-          const rect = target.getBoundingClientRect();
-      
-          // Mouse position
-          const x = e.clientX - rect.left;
-
-          const progress = x / elm.offsetWidth
-
-          dispatch('seek', progress * duration)
-        }
-      }
-
-      elm.addEventListener('mousedown', handleMouseDown);
-
-      return () => {
-        elm.removeEventListener('mousedown', handleMouseDown)
-      }
-    }
-  }, [])
-
-  return (
-    <ProgressBarDiv
-      ref={ref}
-      $progress={percentage}
-    />
-  )
+  return `${minutes}:${(seconds < 10 ? "0" : "") + seconds}`;
 }
 
-export function PlayerControls() {
+function ProgressBar() {
+  const { getProgressPercentage, dispatch, duration } = useSpotify();
+  const [percentage, setPercentage] = useState(getProgressPercentage());
+
+  useEffect(() => {
+    const update = () =>
+      window.requestAnimationFrame(() => {
+        setPercentage(getProgressPercentage());
+      });
+    update();
+    const id = window.setInterval(update, 500);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [getProgressPercentage]);
+
+  const currentTimeMs = percentage * duration;
+  const remainingSeconds = duration - currentTimeMs;
+
+  return (
+    <>
+      <StyledSlider
+        min={0}
+        max={100}
+        value={[percentage * 100]}
+        onChange={(val) => {
+          if (typeof val === "number") {
+            dispatch("seek", (val / 100) * duration);
+          }
+        }}
+        renderTrack={Track}
+        renderThumb={Thumb}
+      />
+      <FlexRow style={{ marginBottom: 10 }}>
+        <Time>{formatTime(currentTimeMs)}</Time>
+        <Time>-{formatTime(remainingSeconds)}</Time>
+      </FlexRow>
+    </>
+  );
+}
+
+export function PlayerControls({
+  keyboardControls,
+}: {
+  keyboardControls: boolean;
+}) {
   const {
     dispatch,
     playing,
@@ -280,40 +276,42 @@ export function PlayerControls() {
   }, [repeatMode, authToken]);
 
   useEffect(() => {
-    function handleKeypress(e: KeyboardEvent) {
-      if (e.metaKey) {
-        switch (e.key) {
-          case "s":
-            toggleShuffle();
-            e.preventDefault();
-            break;
-          // case "r":
-          //   toggleRepeat();
-          //   e.preventDefault();
-          //   break;
-          case "ArrowRight":
-            dispatch("nextTrack");
-            e.preventDefault();
-            break;
-          case "ArrowLeft":
-            dispatch("previousTrack");
-            e.preventDefault();
-            break;
-        }
-      } else {
-        switch (e.key) {
-          case " ":
-            dispatch("togglePlay");
-            e.preventDefault();
-            break;
+    if (keyboardControls) {
+      function handleKeypress(e: KeyboardEvent) {
+        if (e.metaKey) {
+          switch (e.key) {
+            case "s":
+              toggleShuffle();
+              e.preventDefault();
+              break;
+            // case "r":
+            //   toggleRepeat();
+            //   e.preventDefault();
+            //   break;
+            case "ArrowRight":
+              dispatch("nextTrack");
+              e.preventDefault();
+              break;
+            case "ArrowLeft":
+              dispatch("previousTrack");
+              e.preventDefault();
+              break;
+          }
+        } else {
+          switch (e.key) {
+            case " ":
+              dispatch("togglePlay");
+              e.preventDefault();
+              break;
+          }
         }
       }
+      window.addEventListener("keydown", handleKeypress);
+      return () => {
+        window.removeEventListener("keydown", handleKeypress);
+      };
     }
-    window.addEventListener("keydown", handleKeypress);
-    return () => {
-      window.removeEventListener("keydown", handleKeypress);
-    };
-  }, [toggleShuffle, dispatch]);
+  }, [toggleShuffle, dispatch, keyboardControls]);
 
   const mediaIconProps = {
     size: 40,
@@ -337,7 +335,7 @@ export function PlayerControls() {
               </Text>
             </FlexCol>
           </FlexRow>
-          <FullScreenToggle />
+          {keyboardControls && <FullScreenToggle />}
         </FlexRow>
         <ProgressBar />
         <FlexRow>

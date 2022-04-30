@@ -87,10 +87,15 @@ vec2 kaleidoscope(vec2 coord, float segments) {
   float PI = 3.1415;
   float repeateAngle = PI * 2.0 / segments;
   float offset = mod(atan(remapped.x, remapped.y), repeateAngle);
+
+  float odd = mod(atan(remapped.x, remapped.y), repeateAngle * 2.0);
+
+  if (odd >= repeateAngle) {
+    offset = repeateAngle - offset; 
+  }
+
   float angle = atan(remapped.x, remapped.y) + offset;
-  
-  float rot = angle;
-  vec2 rotCoord = rotate(coord, rot);
+  vec2 rotCoord = rotate(coord, angle);
   
   return rotCoord;
 }

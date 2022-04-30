@@ -6,7 +6,7 @@ const client_id = process.env.SPOTIFY_CLIENT_ID;
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
 const basic = Buffer.from(`${client_id}:${client_secret}`).toString("base64");
 
-export async function auth(req: NextApiRequest, res: NextApiResponse) {
+export async function auth(req: NextApiRequest, res: NextApiResponse, forceReset = false): Promise<string | boolean | undefined> {
   const cookies = new Cookies(req, res);
 
   const refreshToken = cookies.get("spotify.refresh_token2");
@@ -47,7 +47,7 @@ export async function auth(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // User has not linked their account
-  else if (!refreshToken) {
+  else if (!refreshToken || forceReset) {
     const state = "afhskeifisnfksuf";
     const scope = "streaming user-read-email user-read-private";
 
@@ -75,12 +75,16 @@ export async function auth(req: NextApiRequest, res: NextApiResponse) {
       }),
     });
     const newTokenJson = await newToken.json();
-    accessToken = newTokenJson.access_token;
-    cookies.set("spotify.access_token2", accessToken);
 
-    // multiply by 0.95 so we refresh just before it expires
-    const future = Date.now() + newTokenJson.expires_in * 1000 * 0.95;
-    cookies.set("spotify.expire_time2", String(future));
+    if (accessToken) {
+      cookies.set("spotify.access_token2", accessToken);
+
+      // multiply by 0.95 so we refresh just before it expires
+      const future = Date.now() + newTokenJson.expires_in * 1000 * 0.95;
+      cookies.set("spotify.expire_time2", String(future));
+    } else {
+      return auth(req, res, true)
+    }
   }
 
   return accessToken;
