@@ -15,6 +15,6 @@
     "jsx": "preserve",
     "incremental": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "components/Player.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "components/Player.jsx", "pages/cs428.tsx"],
   "exclude": ["node_modules"]
 }

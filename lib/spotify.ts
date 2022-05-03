@@ -42,7 +42,7 @@ export async function auth(req: NextApiRequest, res: NextApiResponse, forceReset
     // multiply by 0.95 so we refresh just before it expires
     const future = Date.now() + newTokenJson.expires_in * 1000 * 0.95;
     cookies.set("spotify.expire_time2", String(future));
-    res.redirect("/");
+    res.redirect("/cs428");
     return false;
   }
 
@@ -62,7 +62,9 @@ export async function auth(req: NextApiRequest, res: NextApiResponse, forceReset
       });
     res.status(302).send({ redirect });
     return false;
-  } else if (refreshToken && Date.now() >= parseInt(expireTime)) {
+  } 
+  
+  else if (refreshToken && Date.now() >= parseInt(expireTime)) {
     const newToken = await fetch(TOKEN_ENDPOINT, {
       method: "POST",
       headers: {
@@ -75,6 +77,10 @@ export async function auth(req: NextApiRequest, res: NextApiResponse, forceReset
       }),
     });
     const newTokenJson = await newToken.json();
+
+    console.log(newTokenJson)
+
+    accessToken = newTokenJson.access_token
 
     if (accessToken) {
       cookies.set("spotify.access_token2", accessToken);
